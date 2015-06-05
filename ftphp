@@ -1,0 +1,215 @@
+#!/usr/bin/env php
+<?php
+
+error_reporting(1);
+system("clear");
+#
+#	some vars to make it more beautiful
+#
+
+$black = "\033[0;30m";
+$normal = "\033[0m";
+$white = "\033[1;37m";
+$BGreen="\033[1;32m";
+$BRed="\033[1;31m";
+$red = "\033[0;31m";
+$blue="\033[0;34m";
+$dg="\033[1;30m";
+$cyon="\033[0;36m";
+$dark="\033[1;30m";
+#
+#
+#	basic info
+#
+#
+$user = "";  
+$pass = "";
+$server = "";
+
+$connection =  ftp_connect("$server");
+echo "$white Connecting to $server\n";
+
+$login = ftp_login($connection, $user, $pass) or die("Error while logging in\n");
+
+#
+#
+#	server info
+#
+#
+ftp_pasv($connection, true);
+$system = ftp_systype($connection);
+$currentDir = ftp_pwd($connection);
+
+echo " Connected.\n$normal$dg";
+echo " Current dir: $currentDir\n";
+echo " User: $user\n";
+echo " System: $system\n\n";
+
+main();
+
+#
+#
+#	handler
+#
+#
+
+function main() {
+	global $normal, $BRed, $blue, $cyon, $connection, $white;
+
+	$mydir = ftp_pwd($connection);
+	$cli = readline("$BRed >$normal");
+	$cmd = explode(' ', trim($cli));
+	$var1 = $cmd[0];
+	$var2 = $cmd[1];
+	$var3 = $cmd[2];
+
+	switch ($var1) {
+
+		case 'help':
+			echo "$blue Help Menu$white 
+	mkdir - make new directory
+	upload - upload file to ftp
+	download - download file from ftp to your pc
+	ls - list all files at current dir
+	cd - change directory
+	rename - rename file
+	rmdir - delete a directory
+	delete - delete a file
+	pwd - show current directory
+	bye - disconnect from ftp\n$normal";
+	main();
+
+			break;
+
+		case 'mkdir':
+			echo "$cyon Making dir:$white $var2$normal\n";
+			$makedir = ftp_mkdir($connection, $var2);
+
+			if (!$makedir) {
+				echo "$BRed Error while making dir $white$var2$normal\n";
+				main();
+			}
+			main();
+
+			break;
+
+		case 'upload':
+			echo "$cyon Uploading $white$var2$cyon to $white$mydir$normal\n";
+			$uploading = ftp_put($connection, $var2, $var2, FTP_ASCII);
+
+			if (!$uploading) {
+				echo "$BRed Error while uploading $white$var2$normal\n";
+				main();
+			}
+			main();
+
+			break;
+		
+		case 'ls':
+			$contents = ftp_nlist($connection, ".");
+			foreach ($contents as $key => $value) {
+				echo "$white   $value$normal\n";
+			}
+			main();
+
+			break;
+
+		case 'cd':
+			echo "$cyon Changing dir to $white$var2$normal\n";
+			$chdir = ftp_chdir($connection, $var2);
+
+			if (!$chdir) {
+				echo "$BRed Error while changing dir to $white$var2$normal\n";
+				main();
+			}
+			main();
+
+			break;
+
+		case 'pwd':
+			echo "$cyon Current directory is $white$mydir$normal\n";
+			main();
+
+			break;
+
+		case 'download':
+			echo "$cyon Downloading $white$var2$normal\n";
+			$download = ftp_get($connection, $var2, $var2, FTP_ASCII);
+			if (!$download) {
+				echo "$BRed Error while downloading $white$var2$normal\n";
+				main();
+			}
+			main();
+
+			break;
+
+		case 'rename':
+			echo "$cyon Renaming $white$var2$cyon to $white$var3$normal\n";
+			$renme = ftp_rename($connection, $var2, $var3);
+
+			if (!$renme) {
+				echo "$BRed Error while renaming $white$var2$normal\n";
+				main();
+			}
+			main();
+			break;
+
+		case 'delete':
+			echo "$cyon Deleting file $white$var2$normal\n";
+			$del = ftp_delete($connection, $var2);
+
+			if (!$del) {
+				echo "$BRed Error while deleting file $white$var2$normal\n";
+				main();
+			}
+			main();
+
+			break;
+
+		case 'rmdir':
+			echo "$cyon Deleting dir $white$var2$normal\n";
+			$del = ftp_rmdir($connection, $var2);
+
+			if (!$del) {
+				echo "$BRed Error while deleting dir $white$var2$normal\n";
+				echo "$BRed Trying to empty dir $white$var2$normal\n";
+				
+				$listdir = ftp_nlist($connection, $var2);
+				
+				foreach ($listdir as $key => $value) {
+					echo "$cyon Deleting: $white$value$normal\n";
+					$delall = ftp_delete($connection, $value);
+					if (!$delall) {
+						echo "$BRed Error while deleting file $white$value$normal\n";
+					}
+				}
+				ftp_rmdir($connection, $var2);
+				main();
+			}
+			
+			main();
+			break;
+
+
+		case 'bye':
+			echo "$cyon Closing connection\n";
+			ftp_close($connection);
+			echo "$dg Bye :-)\n";
+
+			break;
+
+		default:
+			echo "$BRed Wrong command! $normal\n";
+			main();
+
+			break;
+	}
+
+}
+
+#
+#
+#	closing the connection
+#
+#
+ftp_close($connection);
